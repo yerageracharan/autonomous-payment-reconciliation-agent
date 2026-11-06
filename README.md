@@ -12,7 +12,11 @@ This project helps compare three kinds of financial records:
 
 The program checks whether these records appear to belong together. If something looks unusual, it puts it in an exception list. An AI assistant can then help explain the evidence.
 
+![The three records meet for a reconciliation check](https://raw.githubusercontent.com/yerageracharan/autonomous-payment-reconciliation-agent/main/docs/art/data-lineup.svg)
+
 The goal is simple: let Python do the careful counting, and let AI help with the detective work.
+
+![Manga-style opening panel: the reconciliation workshop](https://raw.githubusercontent.com/yerageracharan/autonomous-payment-reconciliation-agent/main/docs/art/cover-manga.svg)
 
 > **A small but important note:** This is a learning prototype. It is read-only. It does not send money, issue refunds, change bank records, or write accounting entries. Please keep a human in charge of financial decisions. The computer is clever, but it has not earned its accountant badge yet.
 
@@ -372,6 +376,8 @@ Find the transaction associated with invoice INV-1003.
 
 ### What does the AI actually do?
 
+![The AI assistant asks MCP tools for evidence instead of guessing](https://raw.githubusercontent.com/yerageracharan/autonomous-payment-reconciliation-agent/main/docs/art/ai-tool-buddy.svg)
+
 The AI does not independently open your bank account or make financial decisions.
 
 Instead:
@@ -452,6 +458,10 @@ INV-1001,INV-1001,2026-10-01,125.00,USD,issued,Example customer
 - Remove unnecessary personal information before importing.
 
 # 13. A little tour of the project files
+
+The cast of this little workshop is small. Each file has one job; nobody needs to wear seven hats today.
+
+![The AI and developer working together](https://raw.githubusercontent.com/yerageracharan/autonomous-payment-reconciliation-agent/main/docs/art/ai-tool-buddy.svg)
 
 You do not need to open all these files today. This is just a map for when curiosity wins.
 
