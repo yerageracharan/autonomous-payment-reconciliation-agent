@@ -1,0 +1,6 @@
+invoice_id,invoice_number,invoice_date,amount,currency,status,customer
+INV-1001,INV-1001,2026-10-01,125.00,USD,issued,Acme Auto Care
+INV-1002,INV-1002,2026-10-02,240.00,USD,issued,Northstar Detailing
+INV-1003,INV-1003,2026-10-03,85.00,USD,issued,Prime Wash
+INV-1004,INV-1004,2026-10-04,60.00,USD,issued,City Shine
+INV-1005,INV-1005,2026-10-05,310.00,USD,issued,Bluewater Auto Spa
