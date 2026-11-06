@@ -1,11 +1,12 @@
-"""Small MCP client bridge used by the Streamlit UI and LLM orchestrator."""
+"""MCP Streamable HTTP client bridge for the dashboard and LLM agent."""
 from __future__ import annotations
 import asyncio
 import json
 import os
 from typing import Any
 
-from mcp import Client
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 
 MCP_URL = os.getenv("MCP_URL", "http://127.0.0.1:8001/mcp")
 
@@ -21,13 +22,11 @@ def _sync(coro):
 
 
 def _content_to_python(result: Any) -> Any:
-    structured = getattr(result, "structured_content", None)
-    if structured is None:
-        structured = getattr(result, "structuredContent", None)
+    structured = getattr(result, "structuredContent", None) or getattr(result, "structured_content", None)
     if structured is not None:
         return structured
-    content = getattr(result, "content", []) or []
-    texts = [getattr(part, "text", "") for part in content if getattr(part, "text", None)]
+    parts = getattr(result, "content", []) or []
+    texts = [getattr(part, "text", "") for part in parts if getattr(part, "text", None)]
     if len(texts) == 1:
         try:
             return json.loads(texts[0])
@@ -36,22 +35,30 @@ def _content_to_python(result: Any) -> Any:
     return texts
 
 
+async def _session():
+    raise RuntimeError("Use _with_session for MCP operations.")
+
+
 async def _call_tool(name: str, arguments: dict[str, Any]) -> Any:
-    async with Client(MCP_URL) as client:
-        result = await client.call_tool(name, arguments)
-        if getattr(result, "is_error", False) or getattr(result, "isError", False):
-            raise RuntimeError(str(_content_to_python(result)))
-        return _content_to_python(result)
+    async with streamablehttp_client(MCP_URL) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await session.call_tool(name, arguments)
+            if getattr(result, "isError", False):
+                raise RuntimeError(str(_content_to_python(result)))
+            return _content_to_python(result)
 
 
 async def _list_tools() -> list[dict[str, Any]]:
-    async with Client(MCP_URL) as client:
-        result = await client.list_tools()
-        tools = []
-        for tool in result.tools:
-            schema = getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", None) or {"type": "object", "properties": {}}
-            tools.append({"name": tool.name, "description": getattr(tool, "description", "") or "", "input_schema": schema})
-        return tools
+    async with streamablehttp_client(MCP_URL) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await session.list_tools()
+            return [{
+                "name": tool.name,
+                "description": tool.description or "",
+                "input_schema": tool.inputSchema,
+            } for tool in result.tools]
 
 
 def call_tool(name: str, arguments: dict[str, Any] | None = None) -> Any:
