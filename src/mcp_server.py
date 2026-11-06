@@ -1,21 +1,17 @@
-"""MCP server exposing payment-reconciliation tools to LLM hosts.
-
-Run with: python src/mcp_server.py
-Default endpoint: http://127.0.0.1:8001/mcp (Streamable HTTP)
-"""
+"""MCP server exposing payment-reconciliation tools over Streamable HTTP."""
 from dotenv import load_dotenv
 load_dotenv()
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 import service
 import storage
 
-mcp = MCPServer("agent08-payment-reconciliation")
+mcp = FastMCP("agent08-payment-reconciliation")
 
 
 @mcp.tool()
 def run_reconciliation(date_tolerance_days: int = 3, amount_tolerance: float = 0.01) -> dict:
-    """Run deterministic invoice↔gateway↔bank reconciliation and persist the result locally."""
+    """Run deterministic invoice-to-gateway-to-bank reconciliation and save the result."""
     return service.run_and_save(date_tolerance_days, amount_tolerance)
 
 
@@ -27,13 +23,13 @@ def get_reconciliation_summary() -> dict:
 
 @mcp.tool()
 def list_reconciliation_exceptions(severity: str = "all", exception_type: str = "all") -> dict:
-    """List exceptions. severity may be all, high, or medium; exception_type may be all or a specific exception type."""
+    """List exceptions. Severity: all, high, or medium. Type: all or an exception type."""
     return service.list_exceptions(severity, exception_type)
 
 
 @mcp.tool()
 def investigate_exception(exception_id: str) -> dict:
-    """Retrieve the underlying transaction evidence and related record for one exception."""
+    """Retrieve transaction evidence and related record for one exception."""
     return service.investigate_exception(exception_id)
 
 
@@ -45,13 +41,13 @@ def search_transactions(query: str, limit: int = 20) -> dict:
 
 @mcp.tool()
 def generate_reconciliation_report() -> dict:
-    """Generate a Markdown reconciliation report from the latest saved run."""
+    """Generate a Markdown report from the latest saved reconciliation."""
     return {"markdown": service.report_markdown()}
 
 
 @mcp.tool()
 def get_import_status() -> dict:
-    """Show which local CSV datasets are imported and how many rows each contains."""
+    """Show imported local datasets and row counts."""
     return {"datasets": storage.dataset_status()}
 
 
