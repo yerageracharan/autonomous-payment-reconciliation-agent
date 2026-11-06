@@ -1,385 +1,206 @@
 # Agent #8 — Autonomous Payment Reconciliation Agent
 
-**200 AI Agents in 200 Days · Agent #8**  
-**Category:** Finance Operations / AI Agents / MCP  
-**Status:** Working prototype · Local-first · Read-only
+**200 AI Agents in 200 Days · Agent #8**
 
-An AI-assisted payment reconciliation system that compares three financial data sources—**invoices, payment-gateway transactions, and bank settlements**—to identify matches and surface exceptions for review.
+Hello! 👋 Welcome to this little payment-reconciliation workshop.
 
-The project combines a deterministic Python reconciliation engine with an LLM investigation assistant. The engine makes the matching decisions and performs the arithmetic. The LLM uses tools exposed by the **Model Context Protocol (MCP)** to retrieve evidence and explain exceptions in plain language.
+This project helps compare three kinds of financial records:
 
-> **Important:** This is an educational prototype, not production accounting software. It does not initiate payments, issue refunds, alter bank records, post journal entries, or approve financial actions. Human review is required.
+1. **Invoices** — what a customer was asked to pay.
+2. **Payment gateway records** — what the payment service says it collected.
+3. **Bank records** — what actually appeared in the bank statement.
 
----
+The program checks whether these records appear to belong together. If something looks unusual, it puts it in an exception list. An AI assistant can then help explain the evidence.
 
-## Table of contents
+The goal is simple: let Python do the careful counting, and let AI help with the detective work.
 
-- [Why this project exists](#why-this-project-exists)
-- [What it does](#what-it-does)
-- [How reconciliation works](#how-reconciliation-works)
-- [System architecture](#system-architecture)
-- [Technology stack](#technology-stack)
-- [Repository structure](#repository-structure)
-- [Requirements](#requirements)
-- [Installation](#installation)
-  - [Windows quick start](#windows-quick-start)
-  - [Manual Windows setup](#manual-windows-setup)
-  - [macOS and Linux setup](#macos-and-linux-setup)
-- [Run the application](#run-the-application)
-- [Use the dashboard](#use-the-dashboard)
-- [Prepare your CSV files](#prepare-your-csv-files)
-- [Matching configuration](#matching-configuration)
-- [Exception types](#exception-types)
-- [AI investigator](#ai-investigator)
-- [MCP server and tools](#mcp-server-and-tools)
-- [Configuration reference](#configuration-reference)
-- [Database and data persistence](#database-and-data-persistence)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Security and privacy](#security-and-privacy)
-- [Known limitations](#known-limitations)
-- [Potential next steps](#potential-next-steps)
-- [Contributing](#contributing)
-- [License](#license)
+> **A small but important note:** This is a learning prototype. It is read-only. It does not send money, issue refunds, change bank records, or write accounting entries. Please keep a human in charge of financial decisions. The computer is clever, but it has not earned its accountant badge yet.
 
 ---
 
-## Why this project exists
+# 1. What will we build?
 
-A business may have several records for what is intended to be the same financial event:
+By the end, you should have a small local web application with four areas:
 
-1. An invoice records what a customer is expected to pay.
-2. A payment gateway records the payment collected from that customer.
-3. A bank statement records the settlement that eventually reaches the business bank account.
+- **Data & reconciliation:** upload CSV files or load the included demo files, then run matching.
+- **Exceptions:** inspect payments or invoices that need attention.
+- **AI investigator:** ask questions about the results in normal language.
+- **Architecture:** see how the pieces connect.
 
-These records do not always line up perfectly. References may be inconsistent, settlements may arrive later, fees can change the amount received, duplicate-looking entries may appear, and refunds need separate review.
+The app runs on your own computer.
 
-Manually comparing exports is repetitive and makes it easy to overlook exceptions. This project demonstrates how an AI agent can assist the investigation process while keeping financial calculations deterministic and auditable.
-
-### Core design principle
-
-**Use conventional code for financial matching. Use the LLM for investigation and explanation.**
-
-The model is not trusted to calculate balances, decide that two records match, or silently resolve a discrepancy. It receives the evidence returned by the reconciliation tools and helps an analyst understand what to check next.
-
----
-
-## What it does
-
-### Data ingestion
-
-- Accepts CSV exports for bank transactions, payment-gateway transactions, and invoices.
-- Recognizes common variations in column names.
-- Normalizes dates, numeric amounts, currencies, references, and statuses.
-- Stores the imported datasets locally in SQLite.
-- Includes synthetic sample data for a repeatable demonstration.
-
-### Reconciliation
-
-- Compares invoices against gateway payments.
-- Compares gateway transactions against bank settlements.
-- Uses references, currency, amount tolerances, and date windows to identify candidate matches.
-- Tracks which records have already been allocated during a matching pass.
-- Produces match records and a structured exception list.
-- Saves each reconciliation run so the latest result can be inspected later.
-
-### Exception investigation
-
-The system can surface issues such as:
-
-- Invoices without a corresponding gateway payment.
-- Gateway payments that cannot be allocated to an invoice.
-- Gateway transactions without a corresponding bank settlement.
-- Amount differences between related records.
-- Possible duplicate transactions.
-- Refund-like gateway entries that need review.
-
-### AI-assisted analysis
-
-- Connects to a local Ollama model or a hosted OpenAI-compatible API.
-- Discovers available MCP tools dynamically.
-- Lets the model call those tools to retrieve summaries, transaction records, and exception evidence.
-- Returns an explanation with evidence and suggested human checks.
-- Keeps the matching engine authoritative: the LLM must not override its results.
-
-### Dashboard
-
-A Streamlit interface provides:
-
-- CSV upload and import.
-- Demo-data loading.
-- Dataset status.
-- Reconciliation controls.
-- Summary metrics.
-- An exception queue with filters.
-- Exception detail inspection.
-- Markdown and CSV report downloads.
-- An AI investigation chat.
-
----
-
-## How reconciliation works
-
-The workflow follows the financial record lifecycle:
-
-```text
-                 INVOICE
-                    |
-                    | Match by reference, currency,
-                    | amount and date tolerance
-                    v
-             PAYMENT GATEWAY
-                    |
-                    | Match by reference / amount,
-                    | currency and date tolerance
-                    v
-              BANK SETTLEMENT
-                    |
-                    v
-          MATCHES + EXCEPTIONS
-                    |
-                    v
-        HUMAN REVIEW / INVESTIGATION
-```
-
-### Stage 1 — Normalize the source data
-
-Each uploaded CSV is converted into a common internal structure:
-
-| Field | Purpose |
+| Part | What it does |
 |---|---|
-| `source` | Origin: bank, gateway, or invoice |
-| `transaction_id` | Unique identifier from the source, or a generated fallback |
-| `reference` | Invoice, payment, order, or transaction reference |
-| `date` | Parsed transaction or document date |
-| `amount` | Numeric amount rounded to two decimal places |
-| `currency` | Uppercase currency code |
-| `status` | Normalized status text |
-| `description` | Merchant, customer, narration, or other descriptive text |
+| Python reconciliation engine | Compares records using fixed rules |
+| SQLite database | Saves imported data and reconciliation results on your computer |
+| MCP server | Makes the app's functions available as tools |
+| LLM agent | Calls those tools and explains the evidence |
+| Streamlit | Gives you the web dashboard |
 
-Column names are matched against a set of common aliases. For example, `transaction_date`, `created_at`, and `value_date` can be recognized as date fields.
+You do not need to understand every line of code before starting. First, let's make the little machine run.
 
-An amount column is required. Rows with blank or non-numeric amounts are rejected with a row-level validation message instead of being silently treated as zero.
+# 2. Before starting — a tiny checklist
 
-### Stage 2 — Match invoices to gateway payments
+You will need:
 
-The engine first looks for a reference and currency match. It then checks the configured date and amount tolerances.
+- A Windows, macOS, or Linux computer.
+- Python 3.11 or newer.
+- Internet access for installing packages.
+- About 10–15 minutes for setup, depending on your internet connection.
+- Optional: Ollama, if you want to run the AI model locally.
 
-If the reference matches but the amount differs, the engine records an amount-mismatch exception rather than treating the records as a successful match.
+**What is Ollama?** It is a program that lets you run certain AI models on your own computer. Think of it as giving the AI a small room in your computer to work in.
 
-If an exact reference match is not available, the engine can look for a candidate using amount, currency, and date proximity.
+If you do not want to set up a local model, you can use a compatible hosted API instead. That option needs an API key.
 
-### Stage 3 — Match gateway payments to bank settlements
+# 3. Download the project
 
-The engine attempts to associate gateway transactions with bank records using the available reference, amount, currency, and date information.
+Open the project repository:
 
-A settlement can legitimately differ from the gross gateway payment because of fees, batching, reserves, or timing. This prototype does not model every provider's settlement rules, so such cases should be reviewed rather than automatically adjusted.
+[GitHub — Autonomous Payment Reconciliation Agent](https://github.com/yerageracharan/autonomous-payment-reconciliation-agent)
 
-### Stage 4 — Identify exceptions and save the run
+You have two ways to get the files.
 
-Unmatched or suspicious records are represented as structured exceptions. Each exception includes an ID, type, severity, source, transaction details, and—where applicable—expected amount, actual amount, difference, and related record.
+### Option A — Download ZIP (easiest)
 
-The completed run is saved in SQLite and can be retrieved by the dashboard and MCP tools.
+1. Open the GitHub link above.
+2. Click the green **Code** button.
+3. Choose **Download ZIP**.
+4. Find the downloaded ZIP file.
+5. Right-click it and choose **Extract All**.
+6. Open the extracted project folder.
 
----
+### Option B — Use Git
 
-## System architecture
+If Git is installed, open a terminal and run:
 
-```text
-                         USER
-                          |
-                          v
-                STREAMLIT DASHBOARD
-                 localhost:8501
-                          |
-              +-----------+-----------+
-              |                       |
-              v                       v
-       CSV / SQLite access       AI chat interface
-                                      |
-                                      v
-                               LLM ORCHESTRATOR
-                               src/llm_agent.py
-                                      |
-                        +-------------+-------------+
-                        |                           |
-                        v                           v
-                 LOCAL OLLAMA                HOSTED API
-                 localhost:11434             OpenAI-compatible
-                        |                           |
-                        +-------------+-------------+
-                                      |
-                               tool calls / results
-                                      |
-                                      v
-                                MCP CLIENT
-                              src/mcp_bridge.py
-                                      |
-                           Streamable HTTP / MCP
-                                      |
-                                      v
-                                 MCP SERVER
-                           localhost:8001/mcp
-                              src/mcp_server.py
-                                      |
-                                      v
-                             SERVICE LAYER
-                              src/service.py
-                                      |
-                         +------------+------------+
-                         |                         |
-                         v                         v
-                 RECONCILIATION ENGINE        SQLITE STORAGE
-                 src/reconciliation.py        src/storage.py
+```bash
+git clone https://github.com/yerageracharan/autonomous-payment-reconciliation-agent.git
+cd autonomous-payment-reconciliation-agent
 ```
 
-### Component responsibilities
+If you are new to Git, Option A is perfectly fine. No developer points are deducted. Probably.
 
-| Component | Responsibility |
-|---|---|
-| `app.py` | Streamlit dashboard and user interaction |
-| `src/reconciliation.py` | Data normalization, matching logic, and exception generation |
-| `src/service.py` | Application-level operations shared by the UI and MCP server |
-| `src/storage.py` | SQLite persistence for datasets and reconciliation runs |
-| `src/mcp_server.py` | Exposes application operations as MCP tools |
-| `src/mcp_bridge.py` | Connects the dashboard and agent to the MCP server |
-| `src/llm_agent.py` | LLM orchestration and tool-calling loop |
-| `sample_data/` | Synthetic CSV files for demonstration |
-| `tests/` | Automated tests for reconciliation behavior |
+# 4. Install Python dependencies
 
-### Why MCP?
+Dependencies are the extra Python packages this project needs. We install them inside a virtual environment so they do not interfere with other Python projects.
 
-The Model Context Protocol provides a standard interface through which an AI application can discover and call external tools.
+## Windows
 
-Instead of embedding every data operation directly inside the model prompt, this project exposes specific capabilities—such as listing exceptions or retrieving transaction evidence—as MCP tools. The LLM can discover the available tools and request structured results when needed.
-
----
-
-## Technology stack
-
-| Technology | Role |
-|---|---|
-| Python 3.11+ | Application and reconciliation logic |
-| Pandas | CSV processing and tabular data |
-| SQLite | Local persistence |
-| Streamlit | Web dashboard |
-| Model Context Protocol (MCP) | Tool interface between the agent and application |
-| OpenAI Python SDK | OpenAI-compatible chat completions and tool calling |
-| Ollama | Local model serving |
-| python-dotenv | Environment configuration |
-| pytest | Automated tests |
-
----
-
-## Repository structure
-
-```text
-autonomous-payment-reconciliation-agent/
-|
-|-- app.py
-|-- requirements.txt
-|-- .env.example
-|-- .gitignore
-|-- README.md
-|-- setup.bat
-|-- start.bat
-|-- mcp_config.example.json
-|
-|-- sample_data/
-|   |-- bank.csv
-|   |-- gateway.csv
-|   |-- invoices.csv
-|
-|-- src/
-|   |-- llm_agent.py
-|   |-- mcp_bridge.py
-|   |-- mcp_server.py
-|   |-- reconciliation.py
-|   |-- service.py
-|   |-- storage.py
-|
-|-- tests/
-    |-- conftest.py
-    |-- test_reconciliation.py
-```
-
----
-
-## Requirements
-
-- Python **3.11 or later** recommended.
-- Windows 10/11, macOS, or Linux.
-- Internet access for installing Python packages.
-- For local AI mode: [Ollama](https://ollama.com/) and enough memory to run your chosen model.
-- For hosted AI mode: an API key from an OpenAI-compatible provider.
-
-The reconciliation engine and dashboard data operations do not require a hosted LLM. The AI investigation chat requires a reachable model endpoint.
-
----
-
-## Installation
-
-### Windows quick start
-
-1. Download or clone this repository.
-2. Open the project folder.
-3. Run `setup.bat`.
-4. Install and start [Ollama](https://ollama.com/) if you want local model inference.
-5. Download the default model:
-
-```powershell
-ollama pull qwen3:8b
-```
-
-6. Run `start.bat`.
-
-The dashboard should be available at:
-
-- **Dashboard:** http://localhost:8501
-- **MCP endpoint:** http://127.0.0.1:8001/mcp
-
-If Windows blocks a script, open PowerShell in the project directory and run the commands in the manual setup section.
-
-### Manual Windows setup
-
-Open PowerShell in the repository directory:
+1. Open the project folder.
+2. Click the address bar in File Explorer.
+3. Type `powershell` and press Enter.
+4. In the PowerShell window, run:
 
 ```powershell
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-Copy-Item .env.example .env
 ```
 
-For local AI mode, install Ollama and run:
+If your computer has a newer Python version and `py -3.11` is unavailable, try:
 
 ```powershell
-ollama pull qwen3:8b
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-### macOS and Linux setup
+**What just happened?**
+
+- `.venv` created a private environment for this project.
+- `Activate.ps1` switched your terminal into that environment.
+- `pip install -r requirements.txt` installed the packages listed by the project.
+
+You should see `(.venv)` near the beginning of your terminal prompt. That is your little sign that the environment is active.
+
+## macOS or Linux
+
+Open Terminal in the project folder and run:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**If installation fails:** copy the complete error message and investigate that specific error. Do not randomly install twenty packages from the internet. That is how a peaceful afternoon becomes a documentary.
+
+# 5. Create your local settings file
+
+The project includes a template named `.env.example`.
+
+Make a copy and name the copy `.env`.
+
+**Windows PowerShell:**
+
+```powershell
+Copy-Item .env.example .env
+```
+
+**macOS / Linux:**
+
+```bash
 cp .env.example .env
 ```
 
-For local AI mode, install Ollama and run:
+For the default local setup, you can leave the settings as they are.
+
+The file contains settings such as:
+
+| Setting | Meaning |
+|---|---|
+| `DATABASE_PATH` | Where the local database is saved |
+| `MCP_URL` | Where the dashboard connects to the MCP server |
+| `OLLAMA_BASE_URL` | Address of the local Ollama service |
+| `OLLAMA_MODEL` | Name of the model to use |
+
+Keep your real `.env` file private. Do not upload API keys or secrets to GitHub.
+
+# 6. Set up the AI model (optional, but useful)
+
+The project is configured to use Ollama by default.
+
+1. Install Ollama from [ollama.com](https://ollama.com/).
+2. Start Ollama.
+3. Open a new terminal.
+4. Download the default model:
 
 ```bash
 ollama pull qwen3:8b
 ```
 
----
+This model download can take a while. It is a fairly large file, so please be kind to your internet connection. Maybe offer it some tea.
 
-## Run the application
+To check whether the model is installed:
 
-The application uses two local processes: the MCP server and the Streamlit dashboard. Start both from the repository root, with the virtual environment activated.
+```bash
+ollama list
+```
 
-### Terminal 1 — Start the MCP server
+You should see `qwen3:8b` in the list.
+
+**Computer struggling?** A model of this size needs a reasonable amount of memory. If your computer cannot run it comfortably, choose a smaller model supported by your Ollama installation and enter that model name in the app's sidebar.
+
+### Do I need Ollama to use the reconciliation engine?
+
+No. Ollama is for the AI investigation chat. The CSV import and deterministic reconciliation features are separate from the LLM. You can still explore the project without configuring an AI model.
+
+# 7. Start the application
+
+This project has two parts that need to run:
+
+1. The **MCP server** — provides the tools.
+2. The **Streamlit dashboard** — the web page you interact with.
+
+Keep both terminal windows open while using the application.
+
+## Terminal 1 — Start the MCP server
+
+Open a terminal in the project folder and activate the virtual environment.
 
 **Windows:**
 
@@ -395,15 +216,19 @@ source .venv/bin/activate
 python src/mcp_server.py
 ```
 
-The MCP server is configured for Streamable HTTP at:
+The server is intended to listen at:
 
 ```text
 http://127.0.0.1:8001/mcp
 ```
 
-Keep this terminal open while using the dashboard.
+Leave this terminal running. Do not close it just because it looks quiet. Servers are often quiet when they are doing their job.
 
-### Terminal 2 — Start Streamlit
+## Terminal 2 — Start the dashboard
+
+Open a **second** terminal in the same project folder.
+
+Activate the virtual environment again.
 
 **Windows:**
 
@@ -419,307 +244,258 @@ source .venv/bin/activate
 streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit, usually:
+Streamlit will print a local address. Open this in your browser:
+
+[http://localhost:8501](http://localhost:8501)
+
+There it is — your dashboard.
+
+If the browser does not open automatically, copy the URL from the terminal and paste it into your browser.
+
+# 8. Your first run — use the demo data
+
+Let's not begin with real bank statements. That would be an unnecessarily exciting first day.
+
+The repository includes sample CSV files. They contain fictional transactions designed to demonstrate matches and exceptions.
+
+1. Open the **Data & reconciliation** tab.
+2. Click **Load demo data**.
+3. Wait for the success message.
+4. Check the **Dataset status** section.
+5. You should see records for bank, gateway, and invoices.
+6. Find the **Run matching** section.
+7. Leave the default tolerances for your first run:
+   - Date tolerance: **3 days**
+   - Amount tolerance: **0.01**
+8. Click **Run reconciliation through MCP**.
+9. Wait for the result.
+
+The dashboard should display a summary of the run.
+
+Congratulations. You have completed your first reconciliation. The sample data is fictional, but the detective work is real.
+
+# 9. Understand the results
+
+Before opening the AI chat, let's understand what the program is checking.
+
+Imagine this is the same payment appearing in three places:
+
+| Source | Reference | Amount |
+|---|---|---:|
+| Invoice | INV-1001 | $125.00 |
+| Gateway | INV-1001 | $125.00 |
+| Bank | GW-001 | $125.00 |
+
+The engine tries to connect these records using their references, amounts, currencies, and dates.
+
+If the values line up within the configured tolerances, the engine can record a match.
+
+But what if the invoice says $85 and the gateway says $80? That is a difference of $5. The program should flag it for review instead of pretending everything is perfect.
+
+## What are the tolerances?
+
+**Date tolerance** is the maximum number of days allowed between two candidate records.
+
+For example, with a 3-day tolerance, a payment dated 3 October may be considered against a related record dated 1 October.
+
+**Amount tolerance** is the maximum allowed difference between two amounts.
+
+For example, with a tolerance of 0.01:
+
+- Difference of $0.00 — within tolerance.
+- Difference of $0.01 — within tolerance.
+- Difference of $0.50 — outside tolerance.
+
+These are matching settings, not permission to ignore real financial differences. Choose them based on the business process.
+
+# 10. Explore the Exceptions tab
+
+Click **Exceptions**.
+
+This is the list of records that need a closer look.
+
+You can:
+
+1. Choose a severity filter.
+2. Enter an exception type, or leave it as `all`.
+3. Click **Load exceptions**.
+4. Select an exception ID.
+5. Click **Investigate selected exception**.
+6. Read the evidence returned by the system.
+
+You can also download the exceptions as a CSV file and download the reconciliation report as Markdown.
+
+### Common exception types
+
+| Exception | In simple words |
+|---|---|
+| `unpaid_invoice` | An invoice could not be matched to a gateway payment |
+| `invoice_payment_amount_mismatch` | The invoice and payment amounts differ |
+| `unallocated_payment` | A gateway payment could not be matched to an invoice |
+| `unmatched_bank_transaction` | A bank transaction could not be matched to a gateway record |
+| `gateway_bank_amount_mismatch` | The gateway and bank amounts differ |
+| `possible_duplicate` | Two or more records look suspiciously similar |
+| `refund_review` | A refund-like gateway entry needs checking |
+
+A high-severity label does not automatically mean fraud. It means the record deserves attention. Please do not accuse a transaction of crimes before checking the evidence.
+
+# 11. Talk to the AI investigator
+
+Now for the AI part.
+
+Open the **AI investigator** tab.
+
+Make sure:
+
+- The MCP server is still running.
+- Your chosen model service is running.
+- The model name and provider settings are correct.
+
+Try asking:
 
 ```text
-http://localhost:8501
+Summarize the latest reconciliation in simple language.
 ```
 
----
+Then try:
 
-## Use the dashboard
+```text
+Investigate the highest-risk exception.
+Explain what the records show and what a human should verify.
+```
 
-### 1. Load data
+Or:
 
-Open the **Data & reconciliation** tab.
+```text
+Find the transaction associated with invoice INV-1003.
+```
 
-You can either:
+### What does the AI actually do?
 
-- Click **Load demo data** to populate all three datasets with the included synthetic records; or
-- Upload your own bank, gateway, and invoice CSV exports.
+The AI does not independently open your bank account or make financial decisions.
 
-The application displays a preview of uploaded CSV files before import.
+Instead:
 
-Importing a dataset replaces the currently stored dataset for that source. For example, importing a new bank CSV replaces the previous bank dataset in the local database.
+1. You ask a question.
+2. The LLM decides which available tool could help.
+3. It calls the MCP server.
+4. The MCP server retrieves information from the application.
+5. The LLM reads the returned evidence.
+6. It explains the result in normal language.
 
-### 2. Check dataset status
+The matching engine remains responsible for the calculations. The AI is the assistant, not the financial judge.
 
-The dataset status table shows which sources have been imported, their row counts, and the last update time.
+# 12. Using your own CSV files
 
-A reconciliation run requires all three datasets:
+Once the demo works, you can try your own files.
 
-- Bank
-- Gateway
-- Invoices
+The dashboard accepts three CSV files:
 
-### 3. Run reconciliation
+- A bank statement.
+- A payment-gateway export.
+- An invoice export.
 
-Set the matching tolerances:
+Each file must have an amount column. The program recognizes common column names such as `amount`, `total`, `paid_amount`, and `invoice_amount`.
 
-- **Date tolerance (days):** maximum date distance allowed for a candidate match.
-- **Amount tolerance:** maximum absolute amount difference allowed for a candidate match.
+It also tries to recognize common names for:
 
-Click **Run reconciliation through MCP**.
+- Transaction ID
+- Reference
+- Date
+- Currency
+- Status
+- Description
 
-The dashboard sends the request to the MCP server, which invokes the service layer and deterministic engine. The result is persisted in SQLite.
+### A simple example
 
-### 4. Review the summary
-
-The dashboard displays summary metrics for the latest run, including matched pairs, exceptions, severity counts, and bank transaction count.
-
-### 5. Inspect exceptions
-
-Open the **Exceptions** tab.
-
-- Filter by severity.
-- Enter an exception type or leave it as `all`.
-- Load the exception list.
-- Select an exception ID to inspect its full evidence.
-- Download the exception list as CSV.
-- Download the generated Markdown reconciliation report.
-
-### 6. Ask the AI investigator
-
-Open the **AI investigator** tab and ask a question such as:
-
-- "Summarize the latest reconciliation."
-- "Investigate the highest-risk exception."
-- "Find the transaction associated with invoice INV-1003."
-- "Explain the amount difference and what evidence should be checked."
-- "List the unmatched gateway transactions."
-
-The agent should retrieve the relevant records using MCP tools before answering. Its explanation is advisory; verify all financial decisions against the original source records.
-
----
-
-## Prepare your CSV files
-
-The app accepts CSV files. It attempts to map common column names to a shared internal schema, so your headers do not have to match one exact naming convention.
-
-### Required field
-
-Every dataset must contain an amount column. Recognized examples include:
-
-- `amount`
-- `gross_amount`
-- `net_amount`
-- `total`
-- `transaction_amount`
-- `amount_inr`
-- `amount_usd`
-- `paid_amount`
-- `invoice_amount`
-
-### Recognized field aliases
-
-| Internal field | Example accepted column names |
-|---|---|
-| Transaction ID | `transaction_id`, `txn_id`, `payment_id`, `bank_transaction_id`, `gateway_transaction_id`, `invoice_id` |
-| Reference | `reference`, `reference_id`, `payment_reference`, `transaction_reference`, `invoice_number`, `invoice_no`, `order_id`, `external_id` |
-| Date | `date`, `transaction_date`, `created_at`, `timestamp`, `paid_at`, `settlement_date`, `invoice_date`, `value_date` |
-| Amount | `amount`, `gross_amount`, `net_amount`, `total`, `transaction_amount`, `paid_amount`, `invoice_amount` |
-| Currency | `currency`, `currency_code`, `ccy` |
-| Status | `status`, `payment_status`, `transaction_status`, `state` |
-| Description | `description`, `narration`, `memo`, `merchant`, `vendor`, `customer`, `details`, `counterparty` |
-
-If a transaction ID is not supplied, the normalizer generates a fallback ID for that imported dataset.
-
-### Example bank CSV
+**Bank CSV:**
 
 ```csv
 bank_transaction_id,reference,transaction_date,amount,currency,status,narration
 BK-001,GW-001,2026-10-02,125.00,USD,settled,Example merchant payout
 ```
 
-### Example gateway CSV
+**Gateway CSV:**
 
 ```csv
 gateway_transaction_id,invoice_number,created_at,amount,currency,status,merchant
 GW-001,INV-1001,2026-10-01,125.00,USD,succeeded,Example merchant
 ```
 
-### Example invoice CSV
+**Invoice CSV:**
 
 ```csv
 invoice_id,invoice_number,invoice_date,amount,currency,status,customer
 INV-1001,INV-1001,2026-10-01,125.00,USD,issued,Example customer
 ```
 
-### Data preparation advice
+### Upload your files
 
-- Export dates in a consistent, parseable format such as `YYYY-MM-DD`.
-- Use numeric amounts. Currency symbols and common thousands separators are stripped during normalization.
-- Use consistent currency codes across the three datasets.
-- Preserve invoice numbers and gateway references wherever possible.
-- Do not combine different currencies into one reconciliation batch unless you have implemented explicit FX conversion rules.
-- Check whether bank amounts are gross or net of processing fees before interpreting a difference.
-- Remove unnecessary personal data and mask account numbers before using real exports.
+1. Open **Data & reconciliation**.
+2. Select the bank CSV in the bank upload area.
+3. Select the gateway CSV in the gateway upload area.
+4. Select the invoice CSV in the invoices upload area.
+5. Check the previews.
+6. Click **Import uploaded CSVs**.
+7. Check the dataset status.
+8. Run reconciliation.
 
----
+**Please note:** importing a new file replaces the previously stored dataset for that source. For example, importing a new bank statement replaces the old bank dataset. Keep a backup if you need the old data.
 
-## Matching configuration
+### Data tips
 
-The dashboard exposes two matching parameters.
+- Use dates such as `2026-10-02`.
+- Use consistent currency codes, such as `USD` or `INR`.
+- Keep invoice references wherever possible.
+- Check whether bank amounts are gross or net of fees.
+- Do not mix currencies unless you have implemented exchange-rate conversion.
+- Remove unnecessary personal information before importing.
 
-| Parameter | Default | Meaning |
-|---|---:|---|
-| Date tolerance | 3 days | Maximum number of days between candidate records |
-| Amount tolerance | 0.01 | Maximum absolute difference between candidate amounts, in the dataset's currency units |
+# 13. A little tour of the project files
 
-The matching engine uses the reference and currency when available. It can also consider amount and date proximity when a direct reference match is unavailable.
-
-### Important interpretation notes
-
-- A match is a candidate association based on the configured rules, not proof that the underlying payment is correct.
-- The amount tolerance is an absolute amount, not a percentage.
-- The engine does not perform foreign-exchange conversion.
-- The prototype does not automatically calculate gateway fees, rolling reserves, chargebacks, or payout batching.
-- A bank payout can represent several gateway transactions in real payment systems. This prototype's matching approach is not a full many-to-one settlement allocator.
-- A missing date can limit date-based matching; validate source exports before relying on results.
-
----
-
-## Exception types
-
-The reconciliation engine can generate the following exception categories. Exact results depend on the imported data and matching tolerances.
-
-| Exception type | Meaning | Suggested human check |
-|---|---|---|
-| `unpaid_invoice` | No corresponding gateway payment was found for an invoice | Check payment status, invoice reference, and gateway export date range |
-| `invoice_payment_amount_mismatch` | A matching reference was found, but the invoice and gateway amounts differ | Compare invoice total, discounts, tax, partial payments, and gateway amount |
-| `unallocated_payment` | A gateway payment was not allocated to an invoice | Search for a missing invoice, alternate reference, or duplicate import |
-| `unmatched_bank_transaction` | A bank record could not be associated with a gateway transaction | Check payout references, settlement timing, fees, and bank narration |
-| `gateway_bank_amount_mismatch` | Related gateway and bank records have different amounts | Check processing fees, reserves, adjustments, and payout configuration |
-| `possible_duplicate` | A repeated transaction ID or reference/amount/date combination was detected | Verify against the original provider export and bank statement |
-| `refund_review` | A refund-like gateway entry was detected | Verify the original payment, refund status, and corresponding bank movement |
-
-Severity is assigned by the engine. It is a triage signal, not a final fraud determination.
-
----
-
-## AI investigator
-
-The AI investigator is designed to answer questions about the latest reconciliation by using tools rather than guessing from the prompt.
-
-### Supported model modes
-
-**Local mode — Ollama**
-
-- Runs inference through the Ollama OpenAI-compatible endpoint.
-- Default base URL: `http://127.0.0.1:11434/v1`
-- Default model: `qwen3:8b`
-- Requires Ollama to be installed and the model to be downloaded.
-
-**Cloud mode — OpenAI-compatible API**
-
-- Uses a hosted chat-completions endpoint.
-- Requires a valid API key.
-- The provider must support the tool/function-calling format used by the OpenAI Python SDK.
-- Configure the base URL and model in the dashboard sidebar.
-
-### Agent behavior
-
-The agent's system instructions require it to:
-
-1. Retrieve relevant reconciliation data through MCP tools.
-2. Use engine-produced values for amounts, differences, and exception types.
-3. Distinguish confirmed records from possible explanations.
-4. Explain what a human analyst should verify.
-5. Avoid claiming that it has initiated payments, refunds, or ledger changes.
-6. Redact account-like sensitive values if they appear in retrieved records.
-
-The tool-calling loop has a maximum number of rounds to prevent unbounded tool use.
-
-### Example investigation prompt
+You do not need to open all these files today. This is just a map for when curiosity wins.
 
 ```text
-Investigate the highest-severity exception in the latest run.
-Retrieve its full evidence, explain what is known,
-identify plausible causes without treating them as facts,
-and list the checks a finance analyst should perform.
+autonomous-payment-reconciliation-agent/
+|
+|-- app.py                  # The dashboard
+|-- requirements.txt        # Python packages
+|-- .env.example            # Settings template
+|-- setup.bat               # Windows setup helper
+|-- start.bat               # Windows start helper
+|
+|-- sample_data/            # Fictional CSV examples
+|   |-- bank.csv
+|   |-- gateway.csv
+|   |-- invoices.csv
+|
+|-- src/
+|   |-- reconciliation.py   # Matching rules and calculations
+|   |-- service.py          # Shared application operations
+|   |-- storage.py          # SQLite database
+|   |-- mcp_server.py       # MCP tools provided by the app
+|   |-- mcp_bridge.py       # Connects to the MCP server
+|   |-- llm_agent.py        # AI tool-calling logic
+|
+|-- tests/                  # Automated tests
 ```
 
-The model's output is an analytical aid. It is not an approval, accounting entry, or substitute for source-system verification.
+A good reading order for beginners:
 
----
+1. Start with `app.py` to see the dashboard.
+2. Open `src/reconciliation.py` to understand the matching logic.
+3. Read `src/service.py` to see how the app uses the engine.
+4. Read `src/storage.py` to understand how data is saved.
+5. Explore `src/mcp_server.py` and `src/mcp_bridge.py` to understand MCP.
+6. Finish with `src/llm_agent.py` to see how the AI calls tools.
 
-## MCP server and tools
+One file at a time. No need to speedrun the entire repository. Even the computer needs to read things in order.
 
-The MCP server uses Streamable HTTP. The default endpoint is:
+# 14. Run the tests
 
-```text
-http://127.0.0.1:8001/mcp
-```
+Tests help check whether the matching logic behaves as expected.
 
-The server exposes seven tools:
-
-| Tool | Inputs | Purpose |
-|---|---|---|
-| `run_reconciliation` | `date_tolerance_days`, `amount_tolerance` | Run matching and save a new reconciliation run |
-| `get_reconciliation_summary` | None | Retrieve summary metrics for the latest run |
-| `list_reconciliation_exceptions` | `severity`, `exception_type` | List and filter exceptions |
-| `investigate_exception` | `exception_id` | Retrieve full evidence for one exception |
-| `search_transactions` | `query`, `limit` | Search imported bank, gateway, and invoice records |
-| `generate_reconciliation_report` | None | Generate a Markdown report from the latest run |
-| `get_import_status` | None | Return imported dataset names and row counts |
-
-An example client configuration is provided in `mcp_config.example.json`. Adjust it to the conventions of the MCP client you are using.
-
----
-
-## Configuration reference
-
-Copy `.env.example` to `.env` and edit values as required.
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `DATABASE_PATH` | `data/reconciliation.db` | Local SQLite database path |
-| `MCP_URL` | `http://127.0.0.1:8001/mcp` | MCP endpoint used by the dashboard and agent |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434/v1` | Ollama OpenAI-compatible endpoint |
-| `OLLAMA_MODEL` | `qwen3:8b` | Default local model |
-| `LLM_BASE_URL` | Provider-specific | Optional hosted API base URL |
-| `LLM_MODEL` | Provider-specific | Optional hosted model name |
-| `LLM_API_KEY` | Not set | Optional hosted API credential |
-
-Example:
-
-```dotenv
-DATABASE_PATH=data/reconciliation.db
-MCP_URL=http://127.0.0.1:8001/mcp
-
-OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
-OLLAMA_MODEL=qwen3:8b
-
-# Optional hosted API configuration
-# LLM_BASE_URL=https://api.openai.com/v1
-# LLM_MODEL=your-model-name
-# LLM_API_KEY=your-api-key
-```
-
-Do not commit your real `.env` file or paste API keys into source files.
-
----
-
-## Database and data persistence
-
-The application uses SQLite. By default, the database is created at:
-
-```text
-data/reconciliation.db
-```
-
-The database contains two logical data groups:
-
-- **Datasets:** the latest imported payload for each source—bank, gateway, and invoices.
-- **Reconciliation runs:** saved outputs from previous runs, including summary and exception data.
-
-Importing a dataset replaces the stored dataset for that source. Running reconciliation creates a new run record. The dashboard reads the latest saved run.
-
-To start with a clean environment, stop the application and remove the local database file after making any backup you need. The database may contain sensitive financial information.
-
----
-
-## Testing
+Stop neither terminal just yet if you are still using the app; open a third terminal, or stop the app processes with Ctrl+C first.
 
 Activate the virtual environment and run:
 
@@ -727,146 +503,128 @@ Activate the virtual environment and run:
 pytest -q
 ```
 
-To run Python syntax compilation checks:
+To check Python syntax:
 
 ```bash
 python -m py_compile app.py src/*.py tests/*.py
 ```
 
-The test suite covers core reconciliation behavior using isolated test database configuration. Tests should use synthetic data and must not connect to production financial systems.
+If the tests pass, that is a good sign for the tested logic. It does not prove that every model, computer, CSV format, or production scenario will work.
 
----
+# 15. Troubleshooting — when the computer says no
 
-## Troubleshooting
+### "Python was not found"
 
-### Dashboard opens, but MCP connection fails
+Install Python from [python.org](https://www.python.org/downloads/). On Windows, enable the option to add Python to PATH during installation. Close and reopen PowerShell afterwards.
 
-1. Confirm the MCP server process is running.
-2. Confirm the dashboard and MCP server use the same `MCP_URL`.
-3. Check that port `8001` is not already occupied.
-4. Review the MCP server terminal for startup errors.
+### "No module named ..."
 
-### AI investigator cannot connect to Ollama
+Your virtual environment may not be active, or the packages may not have installed.
 
-1. Confirm Ollama is installed and running.
-2. Check the configured Ollama URL.
-3. Confirm the model is downloaded:
+Activate it and run:
 
 ```bash
-ollama list
+pip install -r requirements.txt
 ```
 
-4. If needed, download the default model:
+### The dashboard opens, but MCP does not connect
 
-```bash
-ollama pull qwen3:8b
-```
+- Check that the MCP server terminal is still running.
+- Check that the MCP URL in `.env` is `http://127.0.0.1:8001/mcp`.
+- Check whether another program is already using port 8001.
+- Read the error shown in the MCP server terminal.
 
-5. Try a smaller model if your computer does not have enough memory.
+### Ollama or the model cannot be reached
 
-### Cloud API mode returns an authentication error
+- Make sure Ollama is installed and running.
+- Run `ollama list` to check the model.
+- Confirm the model name in the dashboard matches the installed model.
+- Confirm the Ollama URL is `http://127.0.0.1:11434/v1`.
 
-- Check that the API key is valid.
-- Confirm the selected provider's base URL.
-- Confirm the model name is available to your account.
-- Ensure the provider supports tool/function calling.
+### CSV import says the amount column is missing
 
-### CSV import reports a missing amount column
+Rename the amount column to a recognized name, such as `amount` or `total`.
 
-Rename the amount field to a recognized alias such as `amount`, `total`, or `transaction_amount`.
+### No records match
 
-### CSV import reports invalid amounts
+Check the references, dates, currencies, and amounts. Also check whether one file contains gross amounts and another contains amounts after fees.
 
-Check for blank cells, text values, or unsupported formatting in the amount column. The normalizer strips common currency symbols and spaces, but source data should still be cleaned.
+Do not immediately increase every tolerance. A bigger tolerance can create incorrect matches. We want accurate results, not optimistic results.
 
-### No matches are found
+# 16. Privacy and safety
 
-- Check that references are consistent between systems.
-- Check that the currency codes match.
-- Increase the date tolerance only if the business process justifies it.
-- Check whether one source uses gross values while another uses net settlements.
-- Confirm that the correct date range was exported.
+Financial data is sensitive. Please treat it carefully.
 
----
+- Use the included fictional data while learning.
+- Do not upload real customer or bank data to a hosted AI provider unless your organization has approved that provider.
+- In cloud mode, prompts and transaction evidence may be sent to the selected model provider.
+- In local Ollama mode, inference runs through your local Ollama service.
+- Do not commit `.env`, API keys, database files, or production exports to GitHub.
+- Do not expose the dashboard or MCP server publicly without proper authentication and security controls.
+- Check every exception against the original financial records before acting.
 
-## Security and privacy
+This prototype does not include enterprise authentication, role-based access control, encryption management, or a production audit system.
 
-Financial exports can contain confidential business and customer information. Treat imported data as sensitive.
+# 17. What this project does not do (yet)
 
-- Use synthetic or masked data for development and demonstrations.
-- Keep the database and `.env` file out of version control.
-- Do not expose the MCP server or Streamlit dashboard publicly without adding authentication, authorization, network restrictions, and appropriate deployment controls.
-- The default configuration binds services to loopback addresses for local use.
-- In local Ollama mode, prompts and retrieved evidence are sent to the local Ollama service.
-- In cloud mode, prompts and transaction evidence used by the agent may be transmitted to the selected model provider. Review that provider's data handling terms and your organization's policies first.
-- Restrict access to the computer and local database.
-- Back up the database securely if you need to retain reconciliation history.
-- Review all exceptions against original source systems before taking action.
+A little honesty is good engineering.
 
-This repository does not implement enterprise-grade access control, audit logging, encryption-at-rest management, or production secrets management.
+Currently, the project:
 
----
+- Imports CSV files; it does not connect directly to banks or payment gateways.
+- Uses rule-based matching; it does not learn from past analyst decisions.
+- Does not perform foreign-exchange conversion.
+- Does not fully support complex one-to-many or many-to-one settlement allocation.
+- Does not comprehensively model every provider's fees, reserves, or chargebacks.
+- Does not support multiple authenticated organizations.
+- Does not initiate payments, refunds, or ledger changes.
 
-## Known limitations
+These are possible future improvements, not existing features.
 
-This project is a prototype and intentionally has a limited scope.
+# 18. Ideas for future improvements
 
-- CSV is the supported import format; there are no direct bank or payment-provider integrations.
-- Matching is rule-based and does not learn from analyst decisions.
-- Foreign-exchange conversion is not implemented.
-- Complex many-to-one or one-to-many settlement allocation is not fully modeled.
-- Provider-specific fee, reserve, chargeback, and payout rules are not comprehensively implemented.
-- There is no user authentication or multi-tenant access model.
-- The local database stores imported records and runs but is not a hardened financial data warehouse.
-- The LLM can produce incorrect explanations; tool evidence and source records must be checked.
-- No payment, refund, journal-entry, or ledger-write operation is available.
+If you want to keep developing the project, here are some sensible next steps:
 
----
+1. Add more CSV templates for different banks and payment gateways.
+2. Improve settlement matching for batches and processing fees.
+3. Add support for partial payments and multiple invoices per payout.
+4. Add analyst notes and a review/approval workflow.
+5. Add a clear audit history of who reviewed each exception.
+6. Add stronger access controls and secure deployment options.
+7. Add more tests for refunds, reversals, duplicates, and unusual date formats.
+8. Add scheduled imports and reconciliation runs.
 
-## Potential next steps
+Build one feature at a time. A small feature that works is better than a giant feature that only works in the developer's imagination.
 
-Possible extensions for future iterations:
+# 19. Quick reference
 
-- Add configurable mapping profiles for different bank and gateway CSV formats.
-- Add many-to-one payout allocation and provider-specific settlement fee models.
-- Add currency-aware reconciliation with explicit exchange-rate sources.
-- Add a review workflow with analyst decisions, notes, and an immutable audit trail.
-- Add role-based access control and encrypted secret management.
-- Add scheduled imports and reconciliation runs.
-- Add more test fixtures for edge cases, partial payments, reversals, and duplicate batches.
-- Add deployment packaging and CI checks for supported operating systems.
-- Add integrations with accounting platforms after implementing appropriate authorization and audit controls.
-
-These are proposed improvements, not current features.
-
----
-
-## Contributing
-
-Contributions are welcome, especially improvements to matching accuracy, CSV normalization, test coverage, and documentation.
-
-A useful contribution workflow:
-
-1. Fork the repository.
-2. Create a focused feature branch.
-3. Add or update tests for behavior changes.
-4. Run `pytest -q` and the syntax check.
-5. Submit a pull request describing the change and its limitations.
-
-Do not use real customer or bank data in issues, test fixtures, or pull requests.
+| What you want to do | Command / action |
+|---|---|
+| Create virtual environment | `python -m venv .venv` |
+| Activate on Windows | `.venv\Scripts\Activate.ps1` |
+| Activate on macOS/Linux | `source .venv/bin/activate` |
+| Install packages | `pip install -r requirements.txt` |
+| Download Ollama model | `ollama pull qwen3:8b` |
+| Start MCP server | `python src/mcp_server.py` |
+| Start dashboard | `streamlit run app.py` |
+| Run tests | `pytest -q` |
+| Dashboard address | http://localhost:8501 |
+| MCP address | http://127.0.0.1:8001/mcp |
 
 ---
 
-## License
+# 20. A small thank you
 
-No license file is currently included. Unless a license is added, the repository should be treated as having **no explicit open-source reuse license**.
+Thank you for checking out Agent #8.
 
----
+This project is part of the **200 AI Agents in 200 Days** challenge: learning by building, making mistakes, fixing them, and hopefully becoming a little better with every agent.
 
-## Project
+If you are also learning, welcome. Nobody understands an entire codebase on the first day. Ask questions, experiment with the demo data, read one file at a time, and remember:
 
-Built as **Agent #8** in the **200 AI Agents in 200 Days** challenge.
+**The goal is not to look like an expert. The goal is to keep learning until the hard things become familiar.**
+
+If you find a bug or have an idea, feel free to open an issue or contribute.
 
 **Repository:** https://github.com/yerageracharan/autonomous-payment-reconciliation-agent
 
-If you find the project useful, consider starring the repository and sharing feedback.
+*Built with Python, Streamlit, SQLite, MCP, and a healthy respect for confusing error messages.*
