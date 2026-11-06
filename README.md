@@ -59,6 +59,9 @@ If you do not want to set up a local model, you can use a compatible hosted API 
 
 # 3. Download the project
 
+![Manga field illustration: 01-download](docs/art/01-download.svg)
+
+
 Open the project repository:
 
 [GitHub — Autonomous Payment Reconciliation Agent](https://github.com/yerageracharan/autonomous-payment-reconciliation-agent)
@@ -66,6 +69,9 @@ Open the project repository:
 You have two ways to get the files.
 
 ### Option A — Download ZIP (easiest)
+
+![Manga field illustration: 02-python](docs/art/02-python.svg)
+
 
 1. Open the GitHub link above.
 2. Click the green **Code** button.
@@ -75,6 +81,9 @@ You have two ways to get the files.
 6. Open the extracted project folder.
 
 ### Option B — Use Git
+
+![Manga field illustration: 03-venv](docs/art/03-venv.svg)
+
 
 If Git is installed, open a terminal and run:
 
@@ -87,9 +96,15 @@ If you are new to Git, Option A is perfectly fine. No developer points are deduc
 
 # 4. Install Python dependencies
 
+![Manga field illustration: 04-dependencies](docs/art/04-dependencies.svg)
+
+
 Dependencies are the extra Python packages this project needs. We install them inside a virtual environment so they do not interfere with other Python projects.
 
 ## Windows
+
+![Manga field illustration: 05-env](docs/art/05-env.svg)
+
 
 1. Open the project folder.
 2. Click the address bar in File Explorer.
@@ -122,6 +137,9 @@ You should see `(.venv)` near the beginning of your terminal prompt. That is you
 
 ## macOS or Linux
 
+![Manga field illustration: 06-ollama](docs/art/06-ollama.svg)
+
+
 Open Terminal in the project folder and run:
 
 ```bash
@@ -134,6 +152,9 @@ pip install -r requirements.txt
 **If installation fails:** copy the complete error message and investigate that specific error. Do not randomly install twenty packages from the internet. That is how a peaceful afternoon becomes a documentary.
 
 # 5. Create your local settings file
+
+![Manga field illustration: 07-server](docs/art/07-server.svg)
+
 
 The project includes a template named `.env.example`.
 
@@ -165,6 +186,9 @@ The file contains settings such as:
 Keep your real `.env` file private. Do not upload API keys or secrets to GitHub.
 
 # 6. Set up the AI model (optional, but useful)
+
+![Manga field illustration: 08-dashboard](docs/art/08-dashboard.svg)
+
 
 The project is configured to use Ollama by default.
 
@@ -204,6 +228,9 @@ Keep both terminal windows open while using the application.
 
 ## Terminal 1 — Start the MCP server
 
+![Manga field illustration: 09-demo](docs/art/09-demo.svg)
+
+
 Open a terminal in the project folder and activate the virtual environment.
 
 **Windows:**
@@ -229,6 +256,9 @@ http://127.0.0.1:8001/mcp
 Leave this terminal running. Do not close it just because it looks quiet. Servers are often quiet when they are doing their job.
 
 ## Terminal 2 — Start the dashboard
+
+![Manga field illustration: 10-import](docs/art/10-import.svg)
+
 
 Open a **second** terminal in the same project folder.
 
@@ -258,6 +288,9 @@ If the browser does not open automatically, copy the URL from the terminal and p
 
 # 8. Your first run — use the demo data
 
+![Manga field illustration: 11-normalize](docs/art/11-normalize.svg)
+
+
 Let's not begin with real bank statements. That would be an unnecessarily exciting first day.
 
 The repository includes sample CSV files. They contain fictional transactions designed to demonstrate matches and exceptions.
@@ -280,6 +313,9 @@ Congratulations. You have completed your first reconciliation. The sample data i
 
 # 9. Understand the results
 
+![Manga field illustration: 12-match](docs/art/12-match.svg)
+
+
 Before opening the AI chat, let's understand what the program is checking.
 
 Imagine this is the same payment appearing in three places:
@@ -298,6 +334,9 @@ But what if the invoice says $85 and the gateway says $80? That is a difference 
 
 ## What are the tolerances?
 
+![Manga field illustration: 13-tolerance](docs/art/13-tolerance.svg)
+
+
 **Date tolerance** is the maximum number of days allowed between two candidate records.
 
 For example, with a 3-day tolerance, a payment dated 3 October may be considered against a related record dated 1 October.
@@ -313,6 +352,9 @@ For example, with a tolerance of 0.01:
 These are matching settings, not permission to ignore real financial differences. Choose them based on the business process.
 
 # 10. Explore the Exceptions tab
+
+![Manga field illustration: 14-bank](docs/art/14-bank.svg)
+
 
 Click **Exceptions**.
 
@@ -331,6 +373,9 @@ You can also download the exceptions as a CSV file and download the reconciliati
 
 ### Common exception types
 
+![Manga field illustration: 15-exceptions](docs/art/15-exceptions.svg)
+
+
 | Exception | In simple words |
 |---|---|
 | `unpaid_invoice` | An invoice could not be matched to a gateway payment |
@@ -344,6 +389,9 @@ You can also download the exceptions as a CSV file and download the reconciliati
 A high-severity label does not automatically mean fraud. It means the record deserves attention. Please do not accuse a transaction of crimes before checking the evidence.
 
 # 11. Talk to the AI investigator
+
+![Manga field illustration: 16-human](docs/art/16-human.svg)
+
 
 Now for the AI part.
 
@@ -376,6 +424,9 @@ Find the transaction associated with invoice INV-1003.
 
 ### What does the AI actually do?
 
+![Manga field illustration: 17-mcp](docs/art/17-mcp.svg)
+
+
 ![The AI assistant asks MCP tools for evidence instead of guessing](https://raw.githubusercontent.com/yerageracharan/autonomous-payment-reconciliation-agent/main/docs/art/ai-tool-buddy.svg)
 
 The AI does not independently open your bank account or make financial decisions.
@@ -392,6 +443,9 @@ Instead:
 The matching engine remains responsible for the calculations. The AI is the assistant, not the financial judge.
 
 # 12. Using your own CSV files
+
+![Manga field illustration: 18-agent](docs/art/18-agent.svg)
+
 
 Once the demo works, you can try your own files.
 
@@ -503,6 +557,9 @@ One file at a time. No need to speedrun the entire repository. Even the computer
 
 # 14. Run the tests
 
+![Manga field illustration: 19-tests](docs/art/19-tests.svg)
+
+
 Tests help check whether the matching logic behaves as expected.
 
 Stop neither terminal just yet if you are still using the app; open a third terminal, or stop the app processes with Ctrl+C first.
@@ -562,6 +619,9 @@ Check the references, dates, currencies, and amounts. Also check whether one fil
 Do not immediately increase every tolerance. A bigger tolerance can create incorrect matches. We want accurate results, not optimistic results.
 
 # 16. Privacy and safety
+
+![Manga field illustration: 20-privacy](docs/art/20-privacy.svg)
+
 
 Financial data is sensitive. Please treat it carefully.
 
