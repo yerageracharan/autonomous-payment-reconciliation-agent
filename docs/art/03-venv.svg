@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330">
+ <defs><pattern id="tone" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#111"/></pattern></defs>
+ <rect width="1200" height="330" fill="#fff"/><path d="M18 18 L1182 12 L1175 316 L25 322Z" fill="#fff" stroke="#111" stroke-width="7"/>
+ <path d="M34 28 L1165 24 L1155 96 L45 102Z" fill="url(#tone)" opacity=".22"/>
+ <text x="62" y="76" font-family="sans-serif" font-size="31" font-weight="900" fill="#111">PRIVATE WORKSPACE</text>
+ <text x="62" y="137" font-family="sans-serif" font-size="22" fill="#111">A virtual environment keeps this project's packages in their own little room.</text>
+ <g transform="translate(865 38)" stroke="#111" stroke-width="6" fill="#fff">
+ <path d="M75 65 Q145 10 220 65 L210 180 Q145 220 80 180Z"/>
+ <path d="M95 58 L75 25 M195 58 L215 25" fill="none"/>
+ <circle cx="125" cy="105" r="8" fill="#111" stroke="none"/><circle cx="175" cy="105" r="8" fill="#111" stroke="none"/>
+ <path d="M125 145 Q150 160 175 145" fill="none"/>
+ <path d="M45 180 Q145 225 245 180" fill="none"/>
+ </g>
+ <path d="M710 82 Q755 40 840 72 L850 125 L735 128Z" fill="#fff" stroke="#111" stroke-width="4"/>
+ <text x="780" y="105" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold">VENV</text>
+ <path d="M820 150 L770 190 M840 155 L865 205 M710 205 L680 225" stroke="#111" stroke-width="5" fill="none"/>
+ <text x="62" y="278" font-family="sans-serif" font-size="17" fill="#111">FIELD NOTE 03 · A tiny computer room with a door marked VENV, packages neatly on shelves, developer taking off shoes politely.</text>
+ <path d="M48 295 L1150 295" stroke="#111" stroke-width="2" stroke-dasharray="8 8"/>
+ </svg>
