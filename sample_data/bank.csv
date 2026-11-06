@@ -1,0 +1,7 @@
+bank_transaction_id,reference,transaction_date,amount,currency,status,narration
+BK-001,GW-001,2026-10-02,125.00,USD,settled,Acme Auto Care payout
+BK-002,GW-002,2026-10-04,240.00,USD,settled,Northstar Detailing payout
+BK-003,GW-003,2026-10-04,79.00,USD,settled,Prime Wash payout net of fee
+BK-004,GW-004,2026-10-07,310.00,USD,settled,Bluewater Auto Spa payout
+BK-005,GW-005,2026-10-08,49.00,USD,settled,Unknown Merchant payout
+BK-006,GW-005,2026-10-08,49.00,USD,settled,Possible duplicate payout
