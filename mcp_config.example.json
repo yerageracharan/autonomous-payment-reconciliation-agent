@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "agent08-payment-reconciliation": {
+      "url": "http://127.0.0.1:8001/mcp"
+    }
+  }
+}
