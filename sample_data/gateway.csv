@@ -1,0 +1,7 @@
+gateway_transaction_id,invoice_number,created_at,amount,currency,status,merchant
+GW-001,INV-1001,2026-10-01,125.00,USD,succeeded,Acme Auto Care
+GW-002,INV-1002,2026-10-03,240.00,USD,succeeded,Northstar Detailing
+GW-003,INV-1003,2026-10-03,80.00,USD,succeeded,Prime Wash
+GW-004,INV-1005,2026-10-06,310.00,USD,succeeded,Bluewater Auto Spa
+GW-005,INV-1006,2026-10-07,49.00,USD,succeeded,Unknown Merchant
+GW-006,INV-1004,2026-10-07,-60.00,USD,refunded,City Shine
