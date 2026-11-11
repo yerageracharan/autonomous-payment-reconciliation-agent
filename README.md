@@ -1,8 +1,10 @@
 # Agent #8 — Autonomous Payment Reconciliation Agent
 
-**[Documentation and code map](docs/README.md)** · [Sample data](sample_data/) · [Tests](tests/)
+**[Documentation and code map](docs/README.md)** · [Sample data](sample_data/) · [Tests](tests/) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 **200 AI Agents in 200 Days · Agent #8**
+
+[![Tests](https://github.com/yerageracharan/autonomous-payment-reconciliation-agent/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/yerageracharan/autonomous-payment-reconciliation-agent/actions/workflows/tests.yml) [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 Hello! 👋 Welcome to this little payment-reconciliation workshop.
 
