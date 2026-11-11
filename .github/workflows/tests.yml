@@ -19,9 +19,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: autonomous-payment-reconciliation-agent-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
