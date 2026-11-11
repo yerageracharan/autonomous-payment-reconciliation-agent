@@ -56,16 +56,23 @@ def investigate_exception(exception_id: str) -> dict[str, Any]:
 
 
 def search_transactions(query: str, limit: int = 20) -> dict[str, Any]:
+    if not isinstance(query, str):
+        raise TypeError("query must be a string")
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise TypeError("limit must be an integer")
+    if limit < 1:
+        raise ValueError("limit must be at least 1")
     needle = query.strip().lower()
     if not needle:
         return {"count": 0, "records": []}
+    result_limit = min(limit, 100)
     found = []
     for source in ["bank", "gateway", "invoices"]:
         for row in storage.get_dataset(source):
             blob = " ".join(str(v) for v in row.values()).lower()
             if needle in blob:
                 found.append({"source": source, **row})
-                if len(found) >= max(1, min(limit, 100)):
+                if len(found) >= result_limit:
                     return {"count": len(found), "records": found}
     return {"count": len(found), "records": found}
 

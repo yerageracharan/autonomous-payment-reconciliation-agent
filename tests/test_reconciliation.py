@@ -85,3 +85,40 @@ def test_service_can_import_run_and_report_locally(tmp_path, monkeypatch):
     assert service.get_summary()["run_id"] == result["run_id"]
     assert "Payment Reconciliation Report" in service.report_markdown()
     assert service.list_exceptions()["count"] > 0
+
+
+@pytest.mark.parametrize("date_tolerance", [-1, 1.5, True, "3"])
+def test_date_tolerance_requires_a_non_negative_integer(date_tolerance):
+    bank, gateway, invoices = sample_frames()
+    with pytest.raises(ValueError, match="date_tolerance_days"):
+        run_reconciliation(bank, gateway, invoices, date_tolerance_days=date_tolerance)
+
+
+@pytest.mark.parametrize("amount_tolerance", [-0.01, float("nan"), float("inf"), True, "0.01"])
+def test_amount_tolerance_requires_a_finite_non_negative_number(amount_tolerance):
+    bank, gateway, invoices = sample_frames()
+    with pytest.raises(ValueError, match="amount_tolerance"):
+        run_reconciliation(bank, gateway, invoices, amount_tolerance=amount_tolerance)
+
+
+def test_search_transactions_validates_inputs_and_caps_results(monkeypatch):
+    import service
+
+    rows = [{"transaction_id": f"TX-{i}", "description": "target settlement"} for i in range(150)]
+    monkeypatch.setattr(service.storage, "get_dataset", lambda _source: rows)
+    with pytest.raises(TypeError, match="query must be a string"):
+        service.search_transactions(None)
+    with pytest.raises(TypeError, match="limit must be an integer"):
+        service.search_transactions("target", True)
+    with pytest.raises(ValueError, match="at least 1"):
+        service.search_transactions("target", 0)
+    result = service.search_transactions("target", 1000)
+    assert result["count"] == 100
+    assert len(result["records"]) == 100
+
+
+def test_search_transactions_blank_query_is_empty(monkeypatch):
+    import service
+
+    monkeypatch.setattr(service.storage, "get_dataset", lambda _source: pytest.fail("must not read datasets"))
+    assert service.search_transactions("   ") == {"count": 0, "records": []}

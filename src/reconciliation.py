@@ -7,6 +7,7 @@ resulting evidence through the MCP tools exposed by mcp_server.py.
 from __future__ import annotations
 
 from typing import Any
+import math
 import re
 import uuid
 import pandas as pd
@@ -181,8 +182,20 @@ def _duplicates(frame: pd.DataFrame, source: str) -> list[dict[str, Any]]:
 def run_reconciliation(bank: pd.DataFrame, gateway: pd.DataFrame, invoices: pd.DataFrame,
                        date_tolerance_days: int = 3, amount_tolerance: float = 0.01) -> dict[str, Any]:
     """Reconcile invoice→gateway and gateway→bank records; return matches and exceptions."""
-    if date_tolerance_days < 0 or amount_tolerance < 0:
-        raise ValueError("Tolerances must be non-negative.")
+    if (
+        isinstance(date_tolerance_days, bool)
+        or not isinstance(date_tolerance_days, int)
+        or date_tolerance_days < 0
+    ):
+        raise ValueError("date_tolerance_days must be a non-negative integer")
+    if (
+        isinstance(amount_tolerance, bool)
+        or not isinstance(amount_tolerance, (int, float))
+        or not math.isfinite(amount_tolerance)
+        or amount_tolerance < 0
+    ):
+        raise ValueError("amount_tolerance must be a finite, non-negative number")
+    amount_tolerance = float(amount_tolerance)
     bank_n = normalize_frame(bank, "bank")
     gateway_n = normalize_frame(gateway, "gateway")
     invoice_n = normalize_frame(invoices, "invoice")
