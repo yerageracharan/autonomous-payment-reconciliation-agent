@@ -1,5 +1,7 @@
 # Agent #8 — Autonomous Payment Reconciliation Agent
 
+**[Documentation and code map](docs/README.md)** · [Sample data](sample_data/) · [Tests](tests/)
+
 **200 AI Agents in 200 Days · Agent #8**
 
 Hello! 👋 Welcome to this little payment-reconciliation workshop.
