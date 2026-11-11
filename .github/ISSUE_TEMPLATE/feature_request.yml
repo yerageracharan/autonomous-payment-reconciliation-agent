@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a reconciliation or reporting improvement.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Synthetic example and validation plan
+      description: Include currency/date/tolerance edge cases and expected outcomes.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Financial-data and action-safety implications
+      description: Confirm whether the idea remains analysis-only and how sensitive data is protected.
+    validations:
+      required: true

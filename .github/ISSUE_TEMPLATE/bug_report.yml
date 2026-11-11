@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible reconciliation or data-handling defect.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic records only. Never attach bank statements, real transaction identifiers, customer data, or credentials."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal synthetic records
+      description: Include relevant bank/gateway/invoice fields with fictional values.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected match or exception
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and redacted logs
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit SHA / version
+  - type: input
+    id: environment
+    attributes:
+      label: Python version and operating system
